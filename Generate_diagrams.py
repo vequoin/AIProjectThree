@@ -1,82 +1,61 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from PIL import Image
 import random
+from PIL import Image
+import matplotlib.pyplot as plt
 
-def generate_wire_layout(grid_size=20):
+def generate_diagram():
     """
-    Generate a random wire layout for a 20x20 grid.
-    Each wire is represented by a row or column, randomly chosen.
-    Colors are assigned based on specific rules.
+    Generate a single 20x20 wiring diagram with the specified rules:
+    - 4 wires in total, each of a different color.
+    - Alternating between rows and columns.
+    - The diagram is dangerous if a red wire is laid before a yellow wire.
     """
-    layout = np.zeros((grid_size, grid_size), dtype=int)
-    colors = ['Red', 'Blue', 'Yellow', 'Green']
-    wire_sequence = []
+    grid_size = 20
+    layout = np.zeros((grid_size, grid_size, 3), dtype=np.uint8)
+    colors = [(255, 0, 0), (0, 0, 255), (255, 255, 0), (0, 255, 0)]  # Red, Blue, Yellow, Green in RGB
+    used_rows = set()
+    used_columns = set()
+    color_sequence = []
+    is_dangerous = False
 
-    # Randomly lay down wires
-    for _ in range(random.randint(5, 10)):  # Random number of wires
-        wire_color = random.choice(colors)
-        wire_type = random.choice(['row', 'column'])
-        wire_position = random.randint(0, grid_size - 1)
+    for i in range(4):
+        # Alternate between row and column
+        if i % 2 == 0:  # Row
+            row = random.choice([r for r in range(grid_size) if r not in used_rows])
+            used_rows.add(row)
+            layout[row, :, :] = colors[i]
+        else:  # Column
+            column = random.choice([c for c in range(grid_size) if c not in used_columns])
+            used_columns.add(column)
+            layout[:, column, :] = colors[i]
 
-        if wire_type == 'row':
-            layout[wire_position, :] = colors.index(wire_color) + 1
-        else:
-            layout[:, wire_position] = colors.index(wire_color) + 1
-        
-        wire_sequence.append((wire_color, wire_type, wire_position))
+        color_sequence.append(colors[i])
 
-    return layout, wire_sequence
+        # Check if the diagram becomes dangerous
+        if colors[i] == (255, 0, 0):  # Red wire
+            is_dangerous = (255, 255, 0) in color_sequence  # Check if Yellow is already placed
 
-def determine_safety(wire_sequence):
+    return layout, is_dangerous
+
+def save_diagrams(num_diagrams=1000):
     """
-    Determine if the wiring is safe or dangerous.
-    Dangerous if a Red wire is laid before a Yellow wire.
+    Generate and save a specified number of diagrams.
     """
-    red_placed = False
-    for color, _, _ in wire_sequence:
-        if color == 'Red':
-            red_placed = True
-        elif color == 'Yellow' and red_placed:
-            return 'Dangerous'
-    return 'Safe'
+    dataset = []
+    for _ in range(num_diagrams):
+        diagram, is_dangerous = generate_diagram()
+        dataset.append((diagram, 'Dangerous' if is_dangerous else 'Safe'))
 
-def convert_to_image(layout, save_path=None):
-    """
-    Convert the numeric layout to an image with colored wires.
-    """
-    color_map = {0: (255, 255, 255),  # White for background
-                 1: (255, 0, 0),      # Red
-                 2: (0, 0, 255),      # Blue
-                 3: (255, 255, 0),    # Yellow
-                 4: (0, 255, 0)}      # Green
+    return dataset
 
-    # Create an RGB image from the layout
-    image_data = np.zeros((layout.shape[0], layout.shape[1], 3), dtype=np.uint8)
-    for i in range(layout.shape[0]):
-        for j in range(layout.shape[1]):
-            image_data[i, j] = color_map[layout[i, j]]
-
-    image = Image.fromarray(image_data, 'RGB')
-    if save_path:
-        image.save(save_path)
-    return image
-
-# Example of generating a dataset
-num_diagrams = 5  # Number of diagrams to generate
-dataset = []
-
-for _ in range(num_diagrams):
-    layout, wire_sequence = generate_wire_layout()
-    safety_label = determine_safety(wire_sequence)
-    image = convert_to_image(layout)
-    dataset.append((layout, wire_sequence, safety_label, image))
+# Generate the dataset
+dataset = save_diagrams(1000)
 
 # Displaying the first few diagrams as an example
-for i, (_, _, safety_label, image) in enumerate(dataset[:3]):
+for i, (diagram, label) in enumerate(dataset[:3]):
+    image = Image.fromarray(diagram, 'RGB')
     plt.figure(figsize=(2, 2))
     plt.imshow(image)
-    plt.title(f"Diagram {i+1} - {safety_label}")
+    plt.title(f"Diagram {i+1}: {label}")
     plt.axis('off')
 plt.show()
