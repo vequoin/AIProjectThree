@@ -36,13 +36,13 @@ def diagram():
     return layout, is_dangerous,color_sequence
 
 
-def save_diagrams(num_diagrams=1000):
-    """
-    Generate and save a specified number of diagrams.
-    """
+def generate_dangerous(size):
     dataset = []
-    for _ in range(num_diagrams):
-        diagram, is_dangerous = diagram()
-        dataset.append((diagram, 'Dangerous' if is_dangerous else 'Safe'))
-
+    count = 0
+    while count < size:
+        temp = diagram()
+        if temp[1] == True:
+            dataset.append(temp)
+            count += 1
+    
     return dataset
