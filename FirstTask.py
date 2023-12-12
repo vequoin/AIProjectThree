@@ -18,7 +18,7 @@ def count_color_intersections(diagram, color1, color2):
 
 
 def create_sequence_based_features(color_sequence):
-    # Example feature: check if the last wire is yellow
+
     last_wire_yellow = int(color_sequence[-1] == (255, 255, 0))
     first_wire_red = int(color_sequence[0] == (255, 0, 0))
     first_wire_yellow = int(color_sequence[0] == (255,255,0))
@@ -177,10 +177,29 @@ def normalize_features(X):
     return (X - mean) / std_replaced
 
 
+def predict_with_untrained_model(X, weights, bias):
+    return sigmoid(np.dot(X, weights) + bias) >= 0.5
+
+
+untrainedSet_size = 500
+untrainedset = [diagram() for _ in range(untrainedSet_size)]
+
+X_test_before = np.array([prepare_data(diagram[0], diagram[2]) for diagram in untrainedset])
+x_test_before_normalized = normalize_features(X_test_before)
+y_test_before = np.array([int(diagram[1]) for diagram in untrainedset])
+# Initialize weights and bias to zero (or small random numbers)
+untrained_weights = np.zeros(X_test_before.shape[1])  # or np.random.rand(X_test.shape[1]) * small_number
+untrained_bias = 0  # or a small random number
+
+# Make predictions
+untrained_predictions = predict_with_untrained_model(x_test_before_normalized, untrained_weights, untrained_bias)
+
+untrained_accuracy = np.mean(untrained_predictions == y_test_before)
+print(f"Model Accuracy before training: {untrained_accuracy}")
 
 
 # Training
-dataset_size = 2000
+dataset_size = 1500
 dataset = [diagram() for _ in range(dataset_size)]
 
 X = np.array([prepare_data(diagram[0], diagram[2]) for diagram in dataset])
@@ -194,10 +213,10 @@ X_shuffled = X_normalized[indices]
 y_shuffled = y[indices]
 
 # Train the model
-weights, bias = train_logistic_regression_with_regularization(X_shuffled, y_shuffled, epochs=1000, learning_rate=0.01,lambda_reg=0.00001)
+weights, bias = train_logistic_regression_with_regularization(X_shuffled, y_shuffled, epochs=1000, learning_rate=0.01,lambda_reg=.00001)
 
 # Testing
-test_size = 500
+test_size = 1000
 testset = [diagram() for _ in range(test_size)]
 
 X_test = np.array([prepare_data(diagram[0],diagram[2]) for diagram in testset])
@@ -207,5 +226,5 @@ x_test_normalized = normalize_features(X_test)
 
 # Evaluate the model
 accuracy = evaluate_model(x_test_normalized, y_test, weights, bias)
-print(f"Model Accuracy: {accuracy}")
+print(f"Model Accuracy after training: {accuracy}")
 
