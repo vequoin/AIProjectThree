@@ -2,6 +2,7 @@ import numpy as np
 from generateDiagrams import diagram
 from generateDiagrams import generate_dangerous
 import random
+import time
 
 # ------------------------------
 # Data Preparation Functions
@@ -9,28 +10,25 @@ import random
 
 from scipy.stats import entropy  # For entropy calculation
 
+
 def compute_statistical_aggregations(diagram):
-    # Initialize lists to store computed statistics for each row
     row_mean = []
     row_variance = []
     row_entropy = []
 
-    # Iterate through each row
-    for row in diagram:
-        # Count color occurrences in the row
-        color_counts = [np.sum(row == color) for color in [0, 1, 2, 3]]  # Assuming 0 for 'Red', 1 for 'Blue', etc.
+    color_values = [(255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 0, 255)]  # RGB values for Red, Green, Yellow, Blue
 
-        # Calculate statistics
+    for row in diagram:
+        color_counts = [np.sum(np.all(row == color, axis=-1)) for color in color_values]
+
         mean = np.mean(color_counts)
         variance = np.var(color_counts)
-        ent = entropy(color_counts)  # You might need to adjust this based on your data format
+        ent = entropy(color_counts, base=2)  # Using base 2 for entropy calculation
 
-        # Append statistics to the respective lists
         row_mean.append(mean)
         row_variance.append(variance)
         row_entropy.append(ent)
 
-    # Return the computed statistics as a list
     return row_mean, row_variance, row_entropy
 
 
@@ -47,7 +45,7 @@ def get_third_wire_position(diagram, color_sequence):
     third_color = color_sequence[2]
     row, col = None, None
     # Check if the third wire is laid in a row or a column
-    for i in range(20):  # Assuming a 20x20 grid
+    for i in range(20):  
         if np.all(diagram[i, :, :] == third_color, axis=1).all():  # Third wire is in this row
             row = i
             break
@@ -61,32 +59,27 @@ grid_width = 20  # Width of the grid
 num_channels = 3  # Number of channels (RGB)
 
 def count_color_frequencies(diagram):
-    # Initialize lists to store color frequencies for each color
-    red_count = []
-    blue_count = []
-    yellow_count = []
-    green_count = []
+    # Initialize counts for each color
+    red_count, green_count, yellow_count, blue_count = 0, 0, 0, 0
 
-    # Define numeric values for colors (0 for 'Red', 1 for 'Green', etc.)
-    color_values = [0, 1, 2, 3]
+    # Define the RGB values for colors
+    color_values = {'Red': [255, 0, 0], 'Green': [0, 255, 0], 'Yellow': [255, 255, 0], 'Blue': [0, 0, 255]}
 
-    # Iterate through each color value
-    for color_value in color_values:
-        # Count occurrences of the color value in each row
-        color_counts = np.sum(diagram == color_value, axis=1)
+    # Count occurrences of each color
+    for i in range(diagram.shape[0]):
+        for j in range(diagram.shape[1]):
+            pixel = diagram[i, j]
+            if np.array_equal(pixel, color_values['Red']):
+                red_count += 1
+            elif np.array_equal(pixel, color_values['Green']):
+                green_count += 1
+            elif np.array_equal(pixel, color_values['Yellow']):
+                yellow_count += 1
+            elif np.array_equal(pixel, color_values['Blue']):
+                blue_count += 1
 
-        # Append color frequencies to the respective lists
-        if color_value == 0:
-            red_count.extend(color_counts)
-        elif color_value == 1:
-            green_count.extend(color_counts)
-        elif color_value == 2:
-            yellow_count.extend(color_counts)
-        elif color_value == 3:
-            blue_count.extend(color_counts)
-
-    # Return the computed color frequencies as lists
     return red_count, green_count, yellow_count, blue_count
+
 
 
 def get_third_wire_row_col(diagram, third_wire_color):
@@ -137,9 +130,44 @@ def encode_wire_positions(color_sequence, color_encoding):
 
 
 
-def calculate_relative_positions(diagram, color_sequence, color_encoding):
+'''def pixel_color_relationships(diagram, seq):
+    grid_size = diagram.shape[0]
+    color_relationships = []
+
+    colors_of_interest = colors_of_interest = {
+    'Red': (255, 0, 0),
+    'Green': (0, 255, 0),
+    'Yellow': (255, 255, 0),
+    'Blue': (0, 0, 255)
+    }
+
+
+    default_value = [0, 0, 0]  # RGB representation for default value
+
+    for i in range(grid_size):
+        for j in range(grid_size):
+            current_pixel = diagram[i, j]
+
+            if any(np.array_equal(current_pixel, color) for color in colors_of_interest.values()):
+                # Initialize with default values
+                up_neighbor = left_neighbor = default_value
+
+                if i > 0:  # Up
+                    up_neighbor = diagram[i-1, j].tolist()
+                if j > 0:  # Left
+                    left_neighbor = diagram[i, j-1].tolist()
+
+                # Add to color_relationships
+                color_relationships.extend(up_neighbor + left_neighbor)
+                
+    #print(color_relationships)
+
+    return color_relationships'''
+
+
+
+def calculate_relative_positions(diagram, color_sequence):
     third_wire_color = color_sequence[2]
-    third_wire_code = color_encoding[third_wire_color]
     third_color_list = [color for color in third_wire_color]
     
     relative_positions = []
@@ -162,7 +190,7 @@ def get_third_wire_intersections(diagram, third_wire_color):
     third_wire_intersections = []
 
     # Check rows for intersections
-    for i in range(diagram.shape[0]):  # Loop through rows
+    for i in range(diagram.shape[0]): 
         row = diagram[i, :]
         if np.array_equal(majority_color(row), third_wire_color):
             for j in range(diagram.shape[1]):  # Check each cell in the row
@@ -170,7 +198,7 @@ def get_third_wire_intersections(diagram, third_wire_color):
                     third_wire_intersections.append((i, j))
             
     # Check columns for intersections
-    for j in range(diagram.shape[1]):  # Loop through columns
+    for j in range(diagram.shape[1]):  
         col = diagram[:, j]
         if np.array_equal(majority_color(col), third_wire_color):
             for i in range(diagram.shape[0]):  # Check each cell in the column
@@ -208,6 +236,141 @@ def get_third_wire_overlaps(diagram, color_sequence):
     return None
 
 
+def get_wire_order(diagram):
+    grid_size = diagram.shape[0]
+    wire_order = []
+    visited_colors = set()
+    
+    for i in range(grid_size):
+        # Check row
+        row_color, row_count = dominant_color_and_count(diagram[i, :, :])
+        if row_color is not None:
+            wire_order.append((tuple(row_color), row_count))
+
+        # Check column
+        col_color, col_count = dominant_color_and_count(diagram[:, i, :])
+        if col_color is not None:
+            wire_order.append((tuple(col_color), col_count))
+
+
+    return wire_order
+
+
+def dominant_color_and_count(line):
+    grid_size = 20
+    colors, counts = np.unique(line.reshape(-1, 3), axis=0, return_counts=True)
+    # Filter out the background color (0,0,0)
+    filtered_indices = [index for index, color in enumerate(colors) if not np.array_equal(color, [0, 0, 0])]
+    if filtered_indices:
+        max_index = filtered_indices[np.argmax(counts[filtered_indices])]
+        return colors[max_index], counts[max_index]
+    return None, 0
+
+
+def calculate_color_distribution(diagram):
+    grid_size = diagram.shape[0] * diagram.shape[1]  # Total number of cells in the diagram
+    color_encoding = {'Red': [255, 0, 0], 'Green': [0, 255, 0], 'Yellow': [255, 255, 0], 'Blue': [0, 0, 255]}
+    color_distribution = {'Red': 0, 'Green': 0, 'Yellow': 0, 'Blue': 0}
+
+    # Count each color
+    for color, rgb in color_encoding.items():
+        color_distribution[color] = np.sum(np.all(diagram == rgb, axis=-1))
+
+    # Normalize the counts
+    for color in color_distribution:
+        color_distribution[color] = color_distribution[color] / grid_size
+
+    return color_distribution
+
+
+def pixel_color_relationships(diagram, seq):
+    grid_size = diagram.shape[0]
+    color_relationships = []
+
+    # Define the RGB values for Red, Green, Yellow, and Blue
+    colors_of_interest = {
+        'Red': (255, 0, 0),
+        'Green': (0, 255, 0),
+        'Yellow': (255, 255, 0),
+        'Blue': (0, 0, 255)
+    }
+
+    # Define a default value for pixels not of interest or without neighbors
+    default_value = [0, 0, 0]  # RGB representation for default value
+
+    for i in range(grid_size):
+        for j in range(grid_size):
+            current_pixel = diagram[i, j]
+            
+            # Initialize neighbor colors with default values
+            neighbors = [default_value] * 4  # Up, Down, Left, Right
+
+            # Check if current pixel is one of the colors of interest
+            if any(np.array_equal(current_pixel, color) for color in colors_of_interest.values()):
+                # Update neighbors based on actual neighbor pixels
+                if i > 0:  # Up
+                    neighbors[0] = diagram[i-1, j].tolist()
+                if i < grid_size - 1:  # Down
+                    neighbors[1] = diagram[i+1, j].tolist()
+                if j > 0:  # Left
+                    neighbors[2] = diagram[i, j-1].tolist()
+                if j < grid_size - 1:  # Right
+                    neighbors[3] = diagram[i, j+1].tolist()
+
+            # Flatten the list of neighbors and add to color_relationships
+            color_relationships.extend(sum(neighbors, []))
+
+    return color_relationships
+
+
+
+def count_intersections(diagram):
+    grid_size = diagram.shape[0]
+    color_encoding = {'Red': [255, 0, 0], 'Green': [0, 255, 0], 'Yellow': [255, 255, 0], 'Blue': [0, 0, 255]}
+    intersections = {'Red': 0, 'Green': 0, 'Yellow': 0, 'Blue': 0}
+
+    # Convert diagram to color names for easier processing
+    color_diagram = np.empty((grid_size, grid_size), dtype=object)
+    for color, rgb in color_encoding.items():
+        color_diagram[np.all(diagram == rgb, axis=-1)] = color
+
+    # Count intersections
+    for i in range(grid_size):
+        for j in range(grid_size):
+            cell_color = color_diagram[i, j]
+            if cell_color:
+                # Check horizontal and vertical neighbors for different color
+                if i < grid_size - 1 and color_diagram[i+1, j] and color_diagram[i+1, j] != cell_color:
+                    intersections[cell_color] += 1
+                if j < grid_size - 1 and color_diagram[i, j+1] and color_diagram[i, j+1] != cell_color:
+                    intersections[cell_color] += 1
+
+    return intersections
+
+
+
+def flatten_intersection_features(intersections):
+    return [intersections['Red'], intersections['Green'], intersections['Yellow'], intersections['Blue']]
+
+def flatten_color_features(color_distribution):
+    return [color_distribution['Red'], color_distribution['Green'], color_distribution['Yellow'], color_distribution['Blue']]
+
+
+def count_color_matches(diagram):
+    grid_size = diagram.shape[0]
+    match_count = 0
+
+    for i in range(grid_size):
+        for j in range(grid_size):
+            if i < grid_size - 1:  # Check vertical match
+                if np.array_equal(diagram[i, j], diagram[i + 1, j]):
+                    match_count += 1
+            if j < grid_size - 1:  # Check horizontal match
+                if np.array_equal(diagram[i, j], diagram[i, j + 1]):
+                    match_count += 1
+
+    return match_count
+
 
 def extract_features(diagram, color_sequence):
     """
@@ -217,95 +380,72 @@ def extract_features(diagram, color_sequence):
     :return: Extracted features as a list.
     """
     color_encoding = {'R': 0, 'G': 1, 'Y': 2, 'B': 3}
-    color_arr = ['R', 'G', 'Y', 'B']
     features = []
     
     color_encodingg = {
     (255, 0, 0): 'R',      # Red
     (0, 255, 0): 'G',    # Green
-    (0, 0, 255): 'Y',     # Blue
-    (255, 255, 0): 'B', # Yellow
+    (0, 0, 255): 'Y',     # Yellow
+    (255, 255, 0): 'B', # Blue
     # Add any other colors that are used in your diagrams
     }
 
-    # Get relative positions and patterns
-    #relative_positions = calculate_relative_positions(diagram, color_sequence, color_encodingg)
-    #print(relative_positions)
+    color_distributions = calculate_color_distribution(diagram)
+    color_distributions_flat = flatten_color_features(color_distributions)
+    features.extend(color_distributions_flat)
+    intersections = count_intersections(diagram)
+    intersections_all = flatten_intersection_features(intersections)
+    features.extend(intersections_all)
     
+    match_colors = count_color_matches(diagram)
+    features.append(match_colors)
+    
+    # wire_order = get_wire_order(diagram)
+    # wire_order_flat = []
+    # for seq in wire_order:
+    #     for color in seq:
+    #         wire_order_flat.append(color)
+    # #print(wire_order_flat)
+    # #Filter and sort the tuples by count
+    # filtered_sorted_tuples = sorted(
+    #     [tup for tup in wire_order if tup[1] in [18, 19, 20]],
+    #     key=lambda x: x[1])
 
-    # Combine all features
-    #features.extend(relative_positions)
+    # # Flatten the sorted tuples to get only the color values
+    # flattened_sorted_colors = [val for tup in filtered_sorted_tuples for val in tup[0]]
 
-    # Feature 1: Identify the third wire laid down
-    third_wire_color_name = rgb_to_color_name.get(color_sequence[2])
-    third_wire = color_encoding.get(third_wire_color_name)
-    color_wire = [item for item in color_sequence[2]]
-    features.append(third_wire)
-    # features.extend(color_wire)
+    # features.extend(flattened_sorted_colors)
+            
+    pixel_relationships = pixel_color_relationships(diagram, color_sequence)
+    #print(pizel_relationships)
+    features.extend(pixel_relationships)
+    #print(features)
     
-    third_wire_col = get_third_wire_row_col(diagram, color_sequence[2])
-    if third_wire_col is not None:
-        flattened_col = third_wire_col.flatten()
-        #features.extend(flattened_col)
-    else:
-        pass
-        # Handle the None case
-        #features.extend([0] * 3)
-        
-    
-    third_wire_pos = get_third_wire_positions(diagram, color_sequence[2])
-    #print(third_wire_pos)
-    #third_pos = third_wire_pos.flatten()
-    flattened_third_wire_pos = [item for sublist in third_wire_pos for item in sublist]
-    #features.extend(flattened_third_wire_pos)
-    flattened_indices = []
-    for i, j in third_wire_pos:
-        base_index = i * 20 * 3 + j * 3  # Calculate the base index for the flattened array
-        flattened_indices.extend([base_index, base_index + 1, base_index + 2])  # Add indices for R, G, B channels
-    #print(flattened_indices)
-    features.extend(flattened_indices)
+    # third_wire_pos = get_third_wire_positions(diagram, color_sequence[2])
+    # #print(third_wire_pos)
+    # flattened_third_wire_pos = [item for sublist in third_wire_pos for item in sublist]
+    # features.extend(flattened_third_wire_pos)
+    # flattened_indices = []
+    # for i, j in third_wire_pos:
+    #     base_index = i * 20 * 3 + j * 3  # Calculate the base index for the flattened array
+    #     flattened_indices.extend([base_index, base_index + 1, base_index + 2])  # Add indices for R, G, B channels
+    # #print(flattened_indices)
+    # features.extend(flattened_indices)
 
    
     row_mean, row_variance, row_entropy = compute_statistical_aggregations(diagram)
     red_count, blue_count, yellow_count, green_count = count_color_frequencies(diagram)
+    #print(red_count, blue_count, yellow_count, green_count)
     
     features.extend([np.mean(row_mean), np.mean(row_variance), np.mean(row_entropy),
                      np.mean(red_count), np.mean(blue_count), np.mean(yellow_count), np.mean(green_count)])
     
-    first_wire = rgb_to_color_name.get(color_sequence[0])
-    second_wire = rgb_to_color_name.get(color_sequence[1])
-    third_wire_seq = rgb_to_color_name.get(color_sequence[2])
-    fourth_wire = rgb_to_color_name.get(color_sequence[3])
-    first_wire_num = color_encoding.get(first_wire)
-    second_wire_num = color_encoding.get(second_wire)
-    third_wire_num = color_encoding.get(third_wire_seq)
-    fourth_wire_num = color_encoding.get(fourth_wire)
-    wire_laid_sequence = [first_wire_num, second_wire_num, third_wire_num, fourth_wire_num]
-    features.extend(wire_laid_sequence)
-    flatten_seq_color = []
-    for color in color_sequence:
-        flatten_seq_color.extend(color)  # Assuming each 'color' is a tuple like (255, 0, 0)
-    features.extend(flatten_seq_color)
     
     overlap = get_third_wire_overlaps(diagram, color_sequence)
     #print(overlap)
     flatten_overlap = flatten_coordinates(overlap)
     #print(overlap)
     features.extend(flatten_overlap)
-    
-    color_hot_one = []
-    for color in color_arr:
-        if third_wire_color_name == color:
-            color_hot_one.append(1)
-        else:
-            color_hot_one.append(0)
-            
-    #print(color_hot_one)
-    features.extend(color_hot_one)
-    
-    Intersections_arr = [2,1,1,0]
-    
-    features.extend(Intersections_arr)
 
     
     third_wire_color = color_sequence[2]
@@ -315,12 +455,13 @@ def extract_features(diagram, color_sequence):
     features.extend(flatten_intersect)
     # print(f"intersect is {flatten_intersect}")
     # print(f"overlap is {flatten_overlap}")
-    #print(features)
-    third_wire_intersections_count = count_intersections_for_wire(diagram, third_wire_color_name)
-    #print(third_wire_intersections)
-    #bb = input("...")
+    # print(features)
+    third_wire_color_name = rgb_to_color_name.get(color_sequence[2])
+    third_wire_intersections_ex = count_intersections_for_wire_verus_length(diagram, third_wire_color_name)
+    # #print(third_wire_intersections_count)
+    # #bb = input("...")
 
-    features.append(third_wire_intersections_count)
+    features.append(third_wire_intersections_ex)
     # print(features)
     # bb = input("...")
     return features
@@ -335,7 +476,8 @@ def flatten_coordinates(coordinates):
     return flattened_indices
 
 
-def count_intersections_for_wire(diagram, wire_color):
+
+def count_intersections_for_wire_verus_length(diagram, wire_color):
     color_encoding = {'R': 0, 'G': 1, 'Y': 2, 'B': 3}
     wire_code = color_encoding[wire_color]
 
@@ -362,17 +504,22 @@ def prepare_data(diagram, color_sequence):
     # Flatten the diagram
     flattened = diagram.reshape(-1)
     
-    
-    
     features = extract_features(diagram, color_sequence)
     
     features_array = np.array(features)
     
     
     combined_features = np.concatenate([flattened, features_array])
+    #print(f"length of feature array is: {len(combined_features)}")
     #print(combined_features)
     
     return combined_features
+
+
+def prepare_data_before(diagram):
+    flattened = diagram.reshape(-1)
+    
+    return np.concatenate([flattened])
     
 
 # ------------------------------
@@ -429,6 +576,7 @@ def update_parameters(weights, biases, gradients, learning_rate):
         weights[color] -= learning_rate * gradient
         biases[color] -= learning_rate * gradients['biases'][color]
     return weights, biases
+
 
 
 # ------------------------------
@@ -514,10 +662,11 @@ def split_dataset(X,y, train_ratio=.8):
 
     return X_train, X_test, y_train, y_test
 
-num_runs = 5
+num_runs = 1
 for i in range(num_runs):
+    start_time = time.time()
     # Load dataset
-    dataset_size = 500
+    dataset_size = 2500
     dataset = generate_dangerous(dataset_size) # Load your dataset here
 
     # Encode labels
@@ -527,7 +676,7 @@ for i in range(num_runs):
     features, labels = [], []
     for diagram_data in dataset:
         diaagram, is_dangerous, color_sequence = diagram_data
-        if is_dangerous:  # Ensure that the diagram is dangerous
+        if is_dangerous:  
             prepared_data = prepare_data(diaagram, color_sequence)
             color_to_cut = color_sequence[2]  # Third wire to be cut
             wire_to_cut = rgb_to_color_name[color_to_cut]
@@ -544,12 +693,14 @@ for i in range(num_runs):
     X_train, X_test, y_train, y_test = split_dataset(X, y)
 
     # Train the model
-    weights, biases = train_model(X_train, y_train, num_epochs=100, learning_rate=0.001, lambda_reg=0.00001)
+    weights, biases = train_model(X_train, y_train, num_epochs=50, learning_rate=0.0001, lambda_reg=0.00001)
 
     # Evaluate the model
     accuracy = evaluate_model(X_test, y_test, weights, biases)
     total += accuracy
     
     print(f"Model Accuracy: {accuracy}")
+    end_time = time.time()
+    print(f"Time taken: {end_time-start_time}")
 
 print(f"Totak Accuracy: {total/num_runs}")
