@@ -400,37 +400,11 @@ def extract_features(diagram, color_sequence):
     match_colors = count_color_matches(diagram)
     features.append(match_colors)
     
-    # wire_order = get_wire_order(diagram)
-    # wire_order_flat = []
-    # for seq in wire_order:
-    #     for color in seq:
-    #         wire_order_flat.append(color)
-    # #print(wire_order_flat)
-    # #Filter and sort the tuples by count
-    # filtered_sorted_tuples = sorted(
-    #     [tup for tup in wire_order if tup[1] in [18, 19, 20]],
-    #     key=lambda x: x[1])
-
-    # # Flatten the sorted tuples to get only the color values
-    # flattened_sorted_colors = [val for tup in filtered_sorted_tuples for val in tup[0]]
-
-    # features.extend(flattened_sorted_colors)
             
     pixel_relationships = pixel_color_relationships(diagram, color_sequence)
     #print(pizel_relationships)
     features.extend(pixel_relationships)
     #print(features)
-    
-    # third_wire_pos = get_third_wire_positions(diagram, color_sequence[2])
-    # #print(third_wire_pos)
-    # flattened_third_wire_pos = [item for sublist in third_wire_pos for item in sublist]
-    # features.extend(flattened_third_wire_pos)
-    # flattened_indices = []
-    # for i, j in third_wire_pos:
-    #     base_index = i * 20 * 3 + j * 3  # Calculate the base index for the flattened array
-    #     flattened_indices.extend([base_index, base_index + 1, base_index + 2])  # Add indices for R, G, B channels
-    # #print(flattened_indices)
-    # features.extend(flattened_indices)
 
    
     row_mean, row_variance, row_entropy = compute_statistical_aggregations(diagram)
@@ -666,7 +640,7 @@ num_runs = 1
 for i in range(num_runs):
     start_time = time.time()
     # Load dataset
-    dataset_size = 2500
+    dataset_size = 500
     dataset = generate_dangerous(dataset_size) # Load your dataset here
 
     # Encode labels
